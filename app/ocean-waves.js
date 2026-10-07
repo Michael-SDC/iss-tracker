@@ -14,6 +14,8 @@ const MAX_DPR = 2;
 // Oberhalb dieser Zoomstufe reicht die float32-Genauigkeit der Weltkoordinaten im Shader
 // nicht mehr aus (Wellen würden zu Blöcken). Dort wird das Overlay ausgeblendet.
 const MAX_WAVE_ZOOM = 12;
+// Wellen-Einheiten pro Weltpixel bei Zoom 2; größer = kleinere Wellen auf dem Bildschirm.
+const WAVE_SCALE = 0.04;
 
 const VERTEX_SHADER = `
 attribute vec2 aPos;
@@ -97,30 +99,39 @@ void main() {
 
   vec2 g = r.yz + gn;
   float height = r.x + h0;
-  vec3 n = normalize(vec3(-g * 0.30, 1.0));
+  vec3 n = normalize(vec3(-g * 0.45, 1.0));
 
   vec3 lightDir = normalize(vec3(-0.50, -0.45, 0.75));
   vec3 viewDir = vec3(0.0, 0.0, 1.0);
+  vec3 halfDir = normalize(lightDir + viewDir);
 
   float diffuse = clamp(dot(n, lightDir) * 0.5 + 0.5, 0.0, 1.0);
-  float spec = pow(max(dot(n, normalize(lightDir + viewDir)), 0.0), 110.0);
   float fresnel = pow(1.0 - n.z, 3.0);
 
-  vec3 deep = vec3(0.04, 0.22, 0.42);
-  vec3 shallow = vec3(0.22, 0.58, 0.74);
-  vec3 sky = vec3(0.70, 0.84, 0.95);
+  // tiefes, dunkles Blau
+  vec3 deep = vec3(0.00, 0.08, 0.24);
+  vec3 shallow = vec3(0.04, 0.26, 0.47);
+  vec3 sky = vec3(0.80, 0.93, 1.0);
 
-  vec3 color = mix(deep, shallow, clamp(0.45 + height * 0.35 + diffuse * 0.30, 0.0, 1.0));
-  color *= 0.75 + 0.5 * diffuse;
-  color += fresnel * sky * 0.45;
-  color += spec * vec3(1.0, 0.97, 0.90) * 0.9;
+  vec3 color = mix(deep, shallow, clamp(0.40 + height * 0.40 + diffuse * 0.35, 0.0, 1.0));
+  color *= 0.80 + 0.40 * diffuse;
+  color += fresnel * sky * 0.22;
 
-  // Schaumkronen auf den höchsten Wellenspitzen
-  float crest = smoothstep(0.55, 1.05, height);
-  float foam = crest * smoothstep(0.40, 0.75, fbm(p * 6.0 + t * 0.1));
-  color = mix(color, vec3(0.96, 0.98, 1.0), foam * 0.55);
+  // Glitzern: Glanzlicht auf stark gekräuselten Mikro-Normalen plus funkelnde Lichtpunkte
+  vec3 nm = normalize(vec3(-(g + gn * 3.0) * 0.55, 1.0));
+  float glint = pow(max(dot(nm, halfDir), 0.0), 60.0);
+  float tw1 = noise(p * 9.0 + vec2(t * 0.55, -t * 0.40));
+  float tw2 = noise(p * 14.0 + vec2(-t * 0.70, t * 0.50) + 31.0);
+  float sparkle = smoothstep(0.80, 0.97, tw1 * tw2 * 1.6) * smoothstep(0.25, 0.75, diffuse);
+  color += glint * vec3(1.0, 0.98, 0.92) * 1.1;
+  color += sparkle * vec3(1.0) * 0.9;
 
-  float alpha = smoothstep(0.25, 0.85, mask) * 0.82;
+  // dezente Schaumkronen
+  float crest = smoothstep(0.65, 1.10, height);
+  float foam = crest * smoothstep(0.45, 0.80, fbm(p * 6.0 + t * 0.1));
+  color = mix(color, vec3(0.96, 0.99, 1.0), foam * 0.30);
+
+  float alpha = smoothstep(0.25, 0.85, mask) * 0.92;
   gl_FragColor = vec4(color * alpha, alpha);
 }`;
 
@@ -253,6 +264,7 @@ export function createOceanWaves(L, tileLayer) {
     },
 
     _hide() {
+      this._zooming = true;
       this._canvas.style.opacity = "0";
     },
 
@@ -330,6 +342,7 @@ export function createOceanWaves(L, tileLayer) {
       this._maskOrigin = this._viewOrigin();
       this._maskCss = { w: cssW, h: cssH, padX, padY };
       this._maskReady = true;
+      this._zooming = false;
       this._canvas.style.opacity = "1";
       if (this._reducedMotion) this._draw(0);
     },
@@ -357,13 +370,15 @@ export function createOceanWaves(L, tileLayer) {
       L.DomUtil.setPosition(this._canvas, map.containerPointToLayerPoint([0, 0]));
 
       const zoom = map.getZoom();
+      // Während der Zoom-Animation (und bis die neue Maske steht) bleibt das Overlay ausgeblendet.
+      if (this._zooming) return;
       if (zoom > MAX_WAVE_ZOOM) {
         this._canvas.style.opacity = "0";
         return;
       }
       this._canvas.style.opacity = "1";
       // Weltpixel verdoppeln sich je Zoomstufe; so bleibt die Wellengröße auf dem Bildschirm konstant.
-      const scale = 0.02 * Math.pow(2, 2 - zoom);
+      const scale = WAVE_SCALE * Math.pow(2, 2 - zoom);
       const origin = this._viewOrigin();
       const m = this._maskCss;
 
