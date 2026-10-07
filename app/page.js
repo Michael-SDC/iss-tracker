@@ -22,6 +22,8 @@ export default function Home() {
   const [error, setError] = useState(false);
   const [theme, setTheme] = useState("light");
   const wavesRef = useRef(null);
+  const mapRef = useRef(null);
+  const markerRef = useRef(null);
   const darkRef = useRef(false);
 
   useEffect(() => {
@@ -67,6 +69,7 @@ export default function Home() {
       if (cancelled) return;
 
       map = leaflet.map(mapElement.current, { worldCopyJump: true }).setView([0, 0], 2);
+      mapRef.current = map;
       // crossOrigin: nötig, damit die Kacheln für die Wassermaske des Wellen-Overlays gelesen werden dürfen.
       const tiles = leaflet
         .tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -88,6 +91,7 @@ export default function Home() {
         iconAnchor: [18, 18],
       });
       marker = leaflet.marker([0, 0], { icon, title: "ISS" }).addTo(map);
+      markerRef.current = marker;
 
       update();
     }
@@ -98,6 +102,8 @@ export default function Home() {
       cancelled = true;
       clearTimeout(timer);
       if (map) map.remove();
+      mapRef.current = null;
+      markerRef.current = null;
     };
   }, []);
 
@@ -122,6 +128,17 @@ export default function Home() {
     } catch {}
   }
 
+  // Verschiebt die Karte zur ISS; panTo ändert die Zoomstufe nie.
+  function centerOnIss() {
+    const map = mapRef.current;
+    const marker = markerRef.current;
+    if (!map || !marker) return;
+    const { lat, lng } = marker.getLatLng();
+    // Weltkopie wählen, die der Kartenmitte am nächsten liegt, damit die Bewegung kurz bleibt.
+    const wrappedLng = lng + 360 * Math.round((map.getCenter().lng - lng) / 360);
+    map.panTo([lat, wrappedLng], { animate: true });
+  }
+
   return (
     <main className="app">
       <header className="header">
@@ -129,7 +146,17 @@ export default function Home() {
           <h1>ISS-Live-Tracker</h1>
           <p>Aktuelle Position der Internationalen Raumstation</p>
         </div>
-        <ThemeToggle dark={theme === "dark"} onToggle={toggleTheme} />
+        <div className="header-actions">
+          <button type="button" className="locate-button" onClick={centerOnIss} disabled={!position}>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="7" />
+              <circle cx="12" cy="12" r="2" />
+              <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+            </svg>
+            Zur ISS
+          </button>
+          <ThemeToggle dark={theme === "dark"} onToggle={toggleTheme} />
+        </div>
       </header>
 
       {error && (

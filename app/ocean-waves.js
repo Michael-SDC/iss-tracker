@@ -15,7 +15,7 @@ const MAX_DPR = 2;
 // nicht mehr aus (Wellen würden zu Blöcken). Dort wird das Overlay ausgeblendet.
 const MAX_WAVE_ZOOM = 12;
 // Wellen-Einheiten pro Bildschirmpixel, unabhängig vom Zoom; größer = kleinere Wellen.
-const WAVE_SCALE = 0.04;
+const WAVE_SCALE = 0.025;
 
 const VERTEX_SHADER = `
 attribute vec2 aPos;
