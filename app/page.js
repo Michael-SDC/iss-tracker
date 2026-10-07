@@ -133,10 +133,9 @@ export default function Home() {
     const map = mapRef.current;
     const marker = markerRef.current;
     if (!map || !marker) return;
-    const { lat, lng } = marker.getLatLng();
-    // Weltkopie wählen, die der Kartenmitte am nächsten liegt, damit die Bewegung kurz bleibt.
-    const wrappedLng = lng + 360 * Math.round((map.getCenter().lng - lng) / 360);
-    map.panTo([lat, wrappedLng], { animate: true });
+    // Auf die echte Marker-Position schwenken: Leaflet zeichnet den Marker nur auf der Original-Weltkarte,
+    // nicht auf den Weltkopien. worldCopyJump springt danach von selbst zurück.
+    map.panTo(marker.getLatLng(), { animate: true });
   }
 
   return (
