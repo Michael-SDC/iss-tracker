@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createOceanWaves } from "./ocean-waves";
 
 const API_URL = "https://api.wheretheiss.at/v1/satellites/25544";
 const POLL_INTERVAL_MS = 5000;
@@ -62,13 +63,16 @@ export default function Home() {
       if (cancelled) return;
 
       map = leaflet.map(mapElement.current, { worldCopyJump: true }).setView([0, 0], 2);
-      leaflet
+      // crossOrigin: nötig, damit die Kacheln für die Wassermaske des Wellen-Overlays gelesen werden dürfen.
+      const tiles = leaflet
         .tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
           maxZoom: 19,
+          crossOrigin: true,
           attribution:
             '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende',
         })
         .addTo(map);
+      createOceanWaves(leaflet, tiles).addTo(map);
 
       const icon = leaflet.divIcon({
         className: "iss-marker",
