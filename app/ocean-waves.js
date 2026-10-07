@@ -14,7 +14,7 @@ const MAX_DPR = 2;
 // Oberhalb dieser Zoomstufe reicht die float32-Genauigkeit der Weltkoordinaten im Shader
 // nicht mehr aus (Wellen würden zu Blöcken). Dort wird das Overlay ausgeblendet.
 const MAX_WAVE_ZOOM = 12;
-// Wellen-Einheiten pro Weltpixel bei Zoom 2; größer = kleinere Wellen auf dem Bildschirm.
+// Wellen-Einheiten pro Bildschirmpixel, unabhängig vom Zoom; größer = kleinere Wellen.
 const WAVE_SCALE = 0.04;
 
 const VERTEX_SHADER = `
@@ -377,8 +377,9 @@ export function createOceanWaves(L, tileLayer) {
         return;
       }
       this._canvas.style.opacity = "1";
-      // Weltpixel verdoppeln sich je Zoomstufe; so bleibt die Wellengröße auf dem Bildschirm konstant.
-      const scale = WAVE_SCALE * Math.pow(2, 2 - zoom);
+      // Fester Faktor pro Bildschirmpixel: die Wellen sind auf jeder Zoomstufe gleich groß.
+      // Der Ursprung bleibt in Weltpixeln der aktuellen Zoomstufe, die Wellen haften also an der Karte.
+      const scale = WAVE_SCALE;
       const origin = this._viewOrigin();
       const m = this._maskCss;
 
