@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createOceanWaves } from "./ocean-waves";
 
+const THEME_KEY = "iss-tracker-theme";
 const API_URL = "https://api.wheretheiss.at/v1/satellites/25544";
 const POLL_INTERVAL_MS = 5000;
 const REQUEST_TIMEOUT_MS = 4000;
@@ -19,6 +20,9 @@ export default function Home() {
   const mapElement = useRef(null);
   const [position, setPosition] = useState(null);
   const [error, setError] = useState(false);
+  const [theme, setTheme] = useState("light");
+  const wavesRef = useRef(null);
+  const darkRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,7 +76,10 @@ export default function Home() {
             '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende',
         })
         .addTo(map);
-      createOceanWaves(leaflet, tiles).addTo(map);
+      const waves = createOceanWaves(leaflet, tiles);
+      waves.setDark(darkRef.current);
+      waves.addTo(map);
+      wavesRef.current = waves;
 
       const icon = leaflet.divIcon({
         className: "iss-marker",
@@ -94,11 +101,35 @@ export default function Home() {
     };
   }, []);
 
+  // Gespeicherte Wahl erst nach dem Mounten lesen (Start ist immer hell, kein Hydration-Mismatch).
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(THEME_KEY) === "dark") setTheme("dark");
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    darkRef.current = theme === "dark";
+    if (wavesRef.current) wavesRef.current.setDark(darkRef.current);
+  }, [theme]);
+
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    try {
+      localStorage.setItem(THEME_KEY, next);
+    } catch {}
+  }
+
   return (
     <main className="app">
       <header className="header">
-        <h1>ISS-Live-Tracker</h1>
-        <p>Aktuelle Position der Internationalen Raumstation</p>
+        <div>
+          <h1>ISS-Live-Tracker</h1>
+          <p>Aktuelle Position der Internationalen Raumstation</p>
+        </div>
+        <ThemeToggle dark={theme === "dark"} onToggle={toggleTheme} />
       </header>
 
       {error && (
@@ -118,6 +149,34 @@ export default function Home() {
 
       <div ref={mapElement} className="map" aria-label="Karte mit der aktuellen ISS-Position" />
     </main>
+  );
+}
+
+function ThemeToggle({ dark, onToggle }) {
+  return (
+    <div className="theme-toggle">
+      <span className={`theme-icon ${dark ? "" : "active"}`} aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+        </svg>
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={dark}
+        aria-label="Dunkler Modus"
+        className="switch"
+        onClick={onToggle}
+      >
+        <span className="switch-thumb" />
+      </button>
+      <span className={`theme-icon ${dark ? "active" : ""}`} aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+        </svg>
+      </span>
+    </div>
   );
 }
 

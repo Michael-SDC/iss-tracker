@@ -31,6 +31,7 @@ uniform float uDpr;
 uniform vec2 uOriginS;    // Weltpixel-Ursprung des Viewports, bereits skaliert
 uniform float uScale;     // Weltpixel -> Wellenkoordinaten
 uniform float uTime;
+uniform float uDark;      // 0 = hell, 1 = Dark-Mode
 uniform vec2 uMaskOffset; // Viewport-Pixel -> Maskenpixel (CSS-Pixel)
 uniform vec2 uMaskSize;   // Maskengröße in CSS-Pixeln
 uniform sampler2D uMask;
@@ -109,9 +110,9 @@ void main() {
   float fresnel = pow(1.0 - n.z, 3.0);
 
   // tiefes, dunkles Blau
-  vec3 deep = vec3(0.00, 0.08, 0.24);
-  vec3 shallow = vec3(0.04, 0.26, 0.47);
-  vec3 sky = vec3(0.80, 0.93, 1.0);
+  vec3 deep = mix(vec3(0.00, 0.08, 0.24), vec3(0.00, 0.025, 0.09), uDark);
+  vec3 shallow = mix(vec3(0.04, 0.26, 0.47), vec3(0.02, 0.11, 0.24), uDark);
+  vec3 sky = mix(vec3(0.80, 0.93, 1.0), vec3(0.45, 0.62, 0.80), uDark);
 
   vec3 color = mix(deep, shallow, clamp(0.40 + height * 0.40 + diffuse * 0.35, 0.0, 1.0));
   color *= 0.80 + 0.40 * diffuse;
@@ -223,7 +224,7 @@ export function createOceanWaves(L, tileLayer) {
       gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
 
       this._u = {};
-      for (const name of ["uRes", "uDpr", "uOriginS", "uScale", "uTime", "uMaskOffset", "uMaskSize", "uMask"]) {
+      for (const name of ["uRes", "uDpr", "uOriginS", "uScale", "uTime", "uDark", "uMaskOffset", "uMaskSize", "uMask"]) {
         this._u[name] = gl.getUniformLocation(program, name);
       }
 
@@ -361,6 +362,12 @@ export function createOceanWaves(L, tileLayer) {
       this._draw(0);
     },
 
+    // Dark-Mode umschalten; im Reduced-Motion-Modus gibt es keine Animationsschleife, daher neu zeichnen.
+    setDark(dark) {
+      this._dark = dark;
+      if (this._reducedMotion && this._gl) this._draw(0);
+    },
+
     _draw(time) {
       const gl = this._gl;
       if (!gl || !this._maskReady || this._failed) return;
@@ -388,6 +395,7 @@ export function createOceanWaves(L, tileLayer) {
       gl.uniform2f(this._u.uOriginS, origin.x * scale, origin.y * scale);
       gl.uniform1f(this._u.uScale, scale);
       gl.uniform1f(this._u.uTime, time);
+      gl.uniform1f(this._u.uDark, this._dark ? 1 : 0);
       gl.uniform2f(
         this._u.uMaskOffset,
         origin.x - this._maskOrigin.x + m.padX,

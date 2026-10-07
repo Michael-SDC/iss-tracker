@@ -1,3 +1,31 @@
+:root {
+  color-scheme: light;
+  --bg: #f4f6f9;
+  --surface: #fff;
+  --border: #dde2ea;
+  --text: #1a1f2b;
+  --muted: #5b6475;
+  --accent: #1a6fd4;
+  --notice-bg: #fff6d6;
+  --notice-border: #e0a800;
+  --notice-text: #5c4500;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b1117;
+  --surface: #0f171f;
+  --border: #1c2a36;
+  --text: #e6edf3;
+  --muted: #7d93a6;
+  --accent: #2ecc8f;
+  --notice-bg: #1a0f10;
+  --notice-border: #c0392b;
+  --notice-text: #ff8a7a;
+  --shadow: none;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -7,8 +35,8 @@ body {
   margin: 0;
   height: 100%;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  color: #1a1f2b;
-  background: #f4f6f9;
+  color: var(--text);
+  background: var(--bg);
 }
 
 .app {
@@ -19,6 +47,13 @@ body {
   gap: 12px;
 }
 
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
 .header h1 {
   margin: 0;
   font-size: 1.5rem;
@@ -26,15 +61,63 @@ body {
 
 .header p {
   margin: 2px 0 0;
-  color: #5b6475;
+  color: var(--muted);
+}
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.theme-icon {
+  display: inline-flex;
+  transition: color 0.2s;
+}
+
+.theme-icon.active {
+  color: var(--accent);
+}
+
+.switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  transition: transform 0.2s;
+}
+
+.switch[aria-checked="true"] .switch-thumb {
+  transform: translateX(20px);
 }
 
 .notice {
   padding: 10px 14px;
-  border: 1px solid #e0a800;
+  border: 1px solid var(--notice-border);
   border-radius: 8px;
-  background: #fff6d6;
-  color: #5c4500;
+  background: var(--notice-bg);
+  color: var(--notice-text);
 }
 
 .stats {
@@ -47,14 +130,15 @@ body {
   display: flex;
   flex-direction: column;
   padding: 10px 14px;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
 .stat-label {
   font-size: 0.8rem;
-  color: #5b6475;
+  color: var(--muted);
 }
 
 .stat-value {
@@ -66,9 +150,10 @@ body {
 .map {
   flex: 1;
   min-height: 300px;
+  border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow);
 }
 
 .iss-marker {
@@ -77,4 +162,22 @@ body {
   text-align: center;
   background: none;
   border: none;
+}
+
+/* Dark-Mode: OSM-Kacheln dunkel einfärben. Das Wellen-Overlay liegt in eigenem Pane und bleibt unberührt. */
+:root[data-theme="dark"] .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.6);
+}
+
+:root[data-theme="dark"] .leaflet-container {
+  background: var(--bg);
+}
+
+:root[data-theme="dark"] .leaflet-control-attribution {
+  background: rgba(11, 17, 23, 0.8);
+  color: var(--muted);
+}
+
+:root[data-theme="dark"] .leaflet-control-attribution a {
+  color: var(--accent);
 }
